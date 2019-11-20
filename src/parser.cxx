@@ -6,6 +6,8 @@
 #include "lex.yy.h"
 #include "ASTNode.h"
 #include "Messages.h"
+#include "semantics.h"
+#include "semantics.cxx"
 
 #include <iostream>
 #include <unistd.h>  // getopt is here
@@ -68,6 +70,9 @@ int main(int argc, char **argv) {
             AST::AST_print_context context;
             root->json(std::cout, context);
             std::cout << std::endl;
+
+            semantics semantic_checker(root);
+            semantic_checker.check_AST();
         } else {
             std::cout << "No tree produced." << std::endl;
         }
