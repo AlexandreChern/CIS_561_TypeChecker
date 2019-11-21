@@ -107,6 +107,8 @@ namespace AST {
     class Ident : public LExpr {
         std::string text_;
     public:
+        std::string get_var() override {return text_;}
+        void collect
         explicit Ident(std::string txt) : text_{txt} {}
         void json(std::ostream& out, AST_print_context& ctx) override;
     };
@@ -253,6 +255,9 @@ namespace AST {
             name_{name},  super_{super},
             constructor_{constructor}, methods_{methods} {};
         void json(std::ostream& out, AST_print_context& ctx) override;
+        void get_var() override {return "";}
+        void get_vars(std::map<std::string, std::string>* vtable) override {return;}
+        
     };
 
     /* A Quack program begins with a sequence of zero or more

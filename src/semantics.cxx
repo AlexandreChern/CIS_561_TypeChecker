@@ -64,7 +64,7 @@ class type_node {
         cout << "\t" << "perent: " << parent << endl;
         cout << "\t" << "instance_vars: " << instance_vars;
 
-        
+
     }
 }
 
@@ -72,7 +72,7 @@ class type_node {
 
 class semantics{
     public:
-        AST::ASTNode*  ast_initial;
+        AST::ASTNode*  ast_init_root;
         void semantic_error{
             cout << "\t semantic error" << endl;
         }
@@ -82,7 +82,7 @@ class semantics{
         map<string, Edge*> edges;
 
         semantics(AST::ASTNode* root){
-            ast_initial = root;
+            ast_init_root = root;
             error_count = 0;
 
             hierarchy = map<string, type_node>();
@@ -93,10 +93,95 @@ class semantics{
 
         }
 
+        int pop_Edges(){
+             for(map<string,type_node>::iterator iter = hierarchy.begin(); iter != hierarchy.end(),iter++){
+                type_node node = iter->second;
+                edges[node.type] = new Edge();
+
+            for(map<string,type_node>::iterator iter = hierarchy.begin(); iter != hierarchy.end(), iter++){
+                type_node node = iter->end;
+                string parent = node->parent; // node.parent ?
+                if (iter->first = "Obj"){
+                    continue;
+                }
+
+                if (!edges.count(node.parent)){
+                    cout << "Error: " << node.parent << "undefined" << endl;
+                    return 0;
+                }
+                edges[node.parent]->children.push_back(node.type);
+            }
+        }
+
+
         int is_cyclic(string root){
             Edge* rootedge = edges[root];
 
         }
+
+        int pop_Builtins(){
+            type_node obj("Obj");
+            obj.parent = "EMPTY";
+            hierarchy["Obj"] = obj;
+        }
+
+        int pop_AST_hierarchy(){
+            pop_Builtins();
+
+            AST::Program *root = (AST::Program*) ast_init_root;
+            AST::Classes  classes_node = root -> classes_;
+
+            vector<AST::Class *> classes = classes_node.elements_;
+            for(AST::Class *elm: classes){
+                string class_name = elm -> name_.text_;
+                type_node node;
+
+                if(hierarchy.count(class_name)){
+                    node = hierarchy[class_name];
+                }
+
+                else{
+                    node = type_node(class_name);
+                }
+                node.parent = elm -> super_.text_;
+
+                AST::Method *constructor = (AST::Method *) & (elm -> constructor_);
+                AST::Ident *return_ = (ASt::Ident*) * (constructor -> returns_)
+                node.construct.returntype = return->text_;
+
+                AST::Formals* formals_node = (AST::Formals*) & (constructor -> formals_);
+                vector<AST::Formal *> formals = formals_node->elements_);
+                for(AST::Formal *formal: formals){
+                    AST::Ident *type = (AST::Ident *) & (formal -> type_);
+                    node.construct.formal_arg_types.push_back(type -> text_);
+                }
+
+                AST::Block* block_node = (AST::Block*) & (constructor -> statements_);
+                vector<AST::Statement *> *statements = (vector<AST::Statement *> *) &block_node -> elements_;
+                vector<AST::Statement *> stmts = *statements;
+
+                for(AST::Statement *stmt: stmts){
+                    stmt->
+                }
+
+            }
+
+
+
+        }
+
+        void print_AST_hierarchy(){
+            cout << "---------------AST_HIERARCHY-------------" << endl;
+            for(map<string,type_node>::iterator iter = hierarchy.begin(); iter != hierarchy.end(); iter++){
+                type_node node = iter->second;
+                node.print();
+                cout << "---------------------------------------------" << endl;
+            }
+                
+            }
+        }
+
+        
 
 
         void check_AST(){
