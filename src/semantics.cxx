@@ -50,53 +50,79 @@ class type_node {
         map<string, string> instance_vars;
         map<string, method_table> methods;
 
-        method_table construct;
+        method_table constructor;
 
     type_node(string var_name){
         var_type = var_name;
         instance_vars = map<string, string>();
         methods = map<string, method_table>();
-        construct = method_table(name);
+        constructor = method_table(name);
     }
 
     void print_type(){
-        cout << "\t" << "var_type: " << var_type << endl;
-        cout << "\t" << "perent: " << parent << endl;
-        cout << "\t" << "instance_vars: " << instance_vars;
+        cout << "\t " << "var_type: " << var_type << endl;
+        cout << "\t " << "perent: " << parent << endl;
+        cout << "\t " << "instance_vars: " << instance_vars;
 
+        for(map<string,string>::iterator iter = instance_vars.begin(); iter != instance_vars.end(); iter++){
+            cout << "\t " << iter->first << ":" << iter->second << endl;
+        }
+        cout << "Methods: " << endl;
 
+        for(map<string,method_table>::iterator iter = methods.begin(); iter != methods.end(); iter++){
+            method_table method = iter->second;
+            method.print_method();
+        }
+        cout << "Constructor: " << endl;
+        constructor.print();
+    }
+}
+
+class AST_edge{
+    public:
+        vector<string> children;
+        int visited;
+
+    AST_edge(){
+        children = vector<string>();
+        visited = 0;
+    }
+
+    void print_edge(){
+        cout << "children: " << endl;
+        for (string child: children){
+            cout << child << ", "
+        }
+        cout << endl;
+        cout << "visited: " << visited << endl;
     }
 }
 
 
-
 class semantics{
     public:
-        AST::ASTNode*  ast_init_root;
+        AST::ASTNode*  AST_init_root;
         void semantic_error{
             cout << "\t semantic error" << endl;
         }
         int modified = 1;
 
         map<string, type_node> hierarchy;
-        map<string, Edge*> edges;
+        map<string, AST_edge*> edges;
 
         semantics(AST::ASTNode* root){
-            ast_init_root = root;
+            AST_init_root = root;
             error_count = 0;
 
             hierarchy = map<string, type_node>();
-            edges = map<string, Edge*>();
+            AST_edges = map<string, AST_AST_edge*>();
         }
 
-        int Edges(){
 
-        }
-
-        int pop_Edges(){
+        int pop_AST_edges(){
              for(map<string,type_node>::iterator iter = hierarchy.begin(); iter != hierarchy.end(),iter++){
                 type_node node = iter->second;
-                edges[node.type] = new Edge();
+                AST_edges[node.type] = new AST_edge();
 
             for(map<string,type_node>::iterator iter = hierarchy.begin(); iter != hierarchy.end(), iter++){
                 type_node node = iter->end;
@@ -105,30 +131,68 @@ class semantics{
                     continue;
                 }
 
-                if (!edges.count(node.parent)){
+                if (!AST_edges.count(node.parent)){
                     cout << "Error: " << node.parent << "undefined" << endl;
                     return 0;
                 }
-                edges[node.parent]->children.push_back(node.type);
+                AST_edges[node.parent]->children.push_back(node.type);
             }
+            return 1;
         }
 
 
         int is_cyclic(string root){
-            Edge* rootedge = edges[root];
+            AST_edge* AST_root_edge = AST_edges[root];
+            for (string child: AST_root_edge->children){
+                AST_edges AST_child_edge = AST_edges[child];
+                if (AST_child_edge->visited){
+                    return 1;
+                }
+                if(is_cyclic(child)){
+                    return 1;
+                }
+            }
+            return 0;
+        }
 
+        int is_subtype(string sub, string super){
+            // need to fill in
         }
 
         int pop_Builtins(){
+
+            type_node program("PGM");
+            program.parent = "obj";
+            hierarchy("PGM") = program;
+
             type_node obj("Obj");
-            obj.parent = "EMPTY";
+            obj.parent = "ERROR";
             hierarchy["Obj"] = obj;
+            
+            method_table mtb("Mtb"); 
+            mtb.return_type = "Nothing";
+            hierarchy["Obj"].methods["Mtb"] = mtb;
+
+            type_node integer("Int");
+            integer.parent = "Obj";
+            hierarchy["Int"] = integer;
+            
+            type_node str("String");
+            str.parent = "Obj";
+            hierarchy["String"] = str;
+
+            type_node booleen("Booleen");
+            booleen.parent = "Obj";
+            hierarchy["Booleen"] = booleen;
+
+            type_node nothing("Nothing");
+            nothing.parent = "Obj";
         }
 
         int pop_AST_hierarchy(){
             pop_Builtins();
 
-            AST::Program *root = (AST::Program*) ast_init_root;
+            AST::Program *root = (AST::Program*) AST_init_root;
             AST::Classes  classes_node = root -> classes_;
 
             vector<AST::Class *> classes = classes_node.elements_;
@@ -139,7 +203,6 @@ class semantics{
                 if(hierarchy.count(class_name)){
                     node = hierarchy[class_name];
                 }
-
                 else{
                     node = type_node(class_name);
                 }
@@ -161,7 +224,7 @@ class semantics{
                 vector<AST::Statement *> stmts = *statements;
 
                 for(AST::Statement *stmt: stmts){
-                    stmt->
+                    stmt->get_vars(&node.instance_vars)
                 }
 
             }
@@ -189,7 +252,13 @@ class semantics{
                 cout << "Cyclid AST Detected" << endl;
                 return nullptr;
             }
+
+            
         }
+        AST::Program *root = (AST::Program*) AST_init_root;
+        set<string> *vars = new set<string>;
+
+        if(root->init_check(vars, this))
 
 };
 

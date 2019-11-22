@@ -8,6 +8,13 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <iostream>
+#include <typeinfo>
+#include <map>
+
+#include "semantics.h"
+
+
 
 namespace AST {
     // Abstract syntax tree.  ASTNode is abstract base class for all other nodes.
@@ -25,6 +32,12 @@ namespace AST {
     class ASTNode {
     public:
         virtual void json(std::ostream& out, AST_print_context& ctx) = 0;  // Json string representation
+        virtual std::string get_vars(std::map<std::string, std::string>* vtable) {std::cout << "GET VARS" <<endl;} // Need to be added
+        virtual std::string get_var(){std::cout << "GET VAR" << std::endl; return "";}
+        virtual std::string get_type(std::map<std::string, std::string>* vtable, semantics* stc, std::string class_name){
+            std::cout << "GET TYPE" << std::endl; return ""; 
+        }
+
         std::string str() {
             std::stringstream ss;
             AST_print_context ctx;
@@ -65,6 +78,17 @@ namespace AST {
     public:
         Seq(std::string kind) : kind_{kind}, elements_{std::vector<Kind *>()} {}
 
+        std::string get_var() override {return "";}
+        int type_inference(semantics* stc, std::map<std::string, std::string>* vtable, methods* info) //override;
+        {
+            info->print()
+            int return_val = 0;
+            for (Kind *elm: elements_){
+                if (elm->type_inference(stc, vtable, info)){return_val = 1;};
+            return return_val; 
+            }
+        }
+
         void append(Kind *el) { elements_.push_back(el); }
 
         void json(std::ostream &out, AST_print_context &ctx) {
@@ -81,6 +105,10 @@ namespace AST {
         }
 
     };
+
+    
+
+
 
     /* L_Expr nodes are AST nodes that can be evaluated for location.
      * Most can also be evaluated for value_.  An example of an L_Expr
@@ -108,7 +136,17 @@ namespace AST {
         std::string text_;
     public:
         std::string get_var() override {return text_;}
-        void collect
+        void get_vars(std::map<std::string, std::string>* vtable) override {return;}
+        std::string get_type(std::map<std::string, std::string>* vtable, semantics* stc, std::string class_name) override{
+            if (vtable->count(text_)){
+                return (*vtable)[text_];
+            }
+            else{
+                std::cout << "TypeError: Identifier" << text_ << "not initialized" << std::endl;
+                return "TypeError";
+            }
+        };
+
         explicit Ident(std::string txt) : text_{txt} {}
         void json(std::ostream& out, AST_print_context& ctx) override;
     };
@@ -121,6 +159,16 @@ namespace AST {
     class Block : public Seq<ASTNode> {
     public:
         explicit Block() : Seq("Block") {}
+        int type_inference(semantics* stc, std::map<std::string, std::string>* vtable, methods* info) override {
+            info -> print();
+            int return_val = 0;
+            for (ASTNode* stmt: elements_){
+                if (stmt -> type_inference(stc, vt, info)){
+                    return_val = 1;
+                };
+            }
+            return return_val;
+        }
      };
 
 
@@ -134,6 +182,16 @@ namespace AST {
     public:
         explicit Formal(ASTNode& var, ASTNode& type_) :
             var_{var}, type_{type_} {};
+        
+        int type_inference(semantics* stc, std::map<std::string, std::string>* vtable, methods* info) override {
+            std::string var = var_.get_var()
+            std::cout << typeid(type_).name() << std::endl;
+            std::string type = type_.get_var();
+            (*vtable)[var] = type;
+            return 0;
+        }
+        std::string get_var(){ return "";}
+        void get_vars(std::map<std::string,std::string>* vtable) override {return;}
         void json(std::ostream& out, AST_print_context&ctx) override;
     };
 
@@ -150,6 +208,15 @@ namespace AST {
     public:
         explicit Method(ASTNode& name, Formals& formals, ASTNode& returns, Block& statements) :
           name_{name}, formals_{formals}, returns_{returns}, statements_{statements} {}
+        
+        int type_inference(semantics* stc, std::map<std::string,std::string>* vtable, methods* info) override{
+            int return_val = 0;
+            int formal_return_val = formals_.type_inference(stc, vtable, info);
+            int statement_return_val = statements_.type_inference(stc, vtable, info);
+            return formal_return_val || statement_return_val;
+        }
+        std::string get_var() override {return "";}
+        int get_vars(std::map<std::string, std::string>* vtable) override {return;}
         void json(std::ostream& out, AST_print_context&ctx) override;
     };
 
@@ -377,6 +444,9 @@ namespace AST {
     public:
         explicit Not(ASTNode& left ):
             left_{left}  {}
+        // std::string get_type(std::map<std::string,std::string>* vtable, semantics *stc, std::string class_name) override {
+        //     return "Booleen";
+        // }
         void json(std::ostream& out, AST_print_context& ctx) override;
     };
 
@@ -407,6 +477,9 @@ namespace AST {
         Block& statements_;
         explicit Program(Classes& classes, Block& statements) :
                 classes_{classes}, statements_{statements} {}
+
+        std::string get_var() override {return ""}
+        std::get_vars(std::map<std::string,std::string>* vtable) override {return;}
         void json(std::ostream& out, AST_print_context& ctx) override;
     };
 
