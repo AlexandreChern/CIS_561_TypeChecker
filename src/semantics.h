@@ -26,12 +26,12 @@ using namespace AST{
 
 class semantics;
 
-class methods {
+class class_and_methods {
     public:
         std::string class_name;
         std::string class_method;
 
-        class_name_and_method(std::string class_name, std::string class_method){
+        class_and_methods(std::string class_name, std::string class_method){
             this->class_name = class_name;
             this->class_method = class_method;
         }
