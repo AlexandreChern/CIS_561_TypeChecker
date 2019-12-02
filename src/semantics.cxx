@@ -333,7 +333,7 @@ class semantics{
             }
         }
 
-        void inheret_methods(){
+        void inherit_methods(){
             for (string class_name: sorted_classes){
                 if (class_name == "PGM"){
                     continue;
@@ -397,11 +397,40 @@ class semantics{
 
 
         void check_AST(){
+            pop_AST_hierarchy();
+            cout << "---------- PRINT AST HIERARCHY -----------" << endl;
+            print_AST_hierarchy();
+
             if (is_cyclic("Obj")){
-                cout << "Cyclid AST Detected" << endl;
+                cout << "---------- CYCLID AST DETECTED -----------" << endl;
                 return nullptr;
             }
+
+            if (!pop_AST_edges()){
+                return nullptr;
+            }
+
+            else {
+                cout << "--------------  ASYCLIC AST GENERATED  -------------" << endl;
+            }
+
+            topological_sort();
+            inherit_methods();
+            cout << "---------------  AST AFTER SORTED -----------------" << endl;
+            print_AST_hierarchy();
+
+            AST::Program *root = (AST::Program*) AST_init_root;
+            set<string> *vars = new set<string>;
+            if (root->init_check(vars, this)){
+                cout << "-------------- INITIALIZATION ERRORS --------------" << endl;
+                return nullptr;
+            }
+            type_check();
+            print_AST_hierarchy();
+            return &hierarchy
         }
+
+
 
         vector<string> split(string string_to_split, char delimeter)
         {
@@ -412,6 +441,19 @@ class semantics{
                 splited_strings.push_back(item);
             }
             return splitted_strings;
+        }
+
+        int compare_maps(map<string,string> map_1, map<string,string> map_2){
+            if (map_1.size() != map2.size()){
+                return 0;
+            }
+            type_name map<string,string>::iterator i,j;
+            for (i = map_1.begin(), j = map_2.begin(); i!= map_1.end(); i++, j++){
+                if (*i != *j){
+                    return 0;
+                }
+                return 1;
+            }
         }
 
         map<string, TypeNOde>* type_check(){
