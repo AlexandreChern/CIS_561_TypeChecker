@@ -18,7 +18,7 @@ class class_and_methods {
 
         string inhereted_from;
 
-        mclass_and_methods(){
+        class_and_methods(){
             formal_arg_types = vector<string>();
             vars = new map<string, string>();
         }
@@ -65,7 +65,7 @@ class type_node {
     type_node(){
         instance_vars = map<string, string>();
         methods = map<string, class_and_methods>();
-        construct = class_and_methods();
+        constructor = class_and_methods();
         resolved = 0;
         method_list = vector<string>();
     }
@@ -74,7 +74,7 @@ class type_node {
         var_type = var_name;
         instance_vars = map<string, string>();
         methods = map<string, class_and_methods>();
-        constructor = class_and_methods(name);
+        constructor = class_and_methods(var_name);
         resolved = 0;
         method_list = vector<string>();
     }
@@ -100,10 +100,10 @@ class type_node {
             class_and_methods method = iter->second;
             method.print_method();
         }
-        cout << "Constructor: " << endl;
-        constructor.print();
+        cout << "constructor: " << endl;
+        constructor.print_method();
     }
-}
+};
 
 class AST_edge{
     public:
@@ -123,20 +123,20 @@ class AST_edge{
         cout << endl;
         cout << "visited: " << visited << endl;
     }
-}
+};
 
 
 class semantics{
     public:
         AST::ASTNode*  AST_init_root;
-        void semantic_error{
-            cout << "\t semantic error" << endl;
-        }
+        // void semantic_error{
+        //     cout << "\t semantic error" << endl;
+        // };
         int found_error;
         int modified = 1;
 
         map<string, type_node> hierarchy;
-        map<string, AST_edge*> edges;
+        map<string, AST_edge*> AST_edges;
         vector<string> sorted_classes;
 
         semantics(AST::ASTNode* root){
@@ -144,7 +144,7 @@ class semantics{
             found_error = 0;
 
             hierarchy = map<string, type_node>();
-            AST_edges = map<string, AST_AST_edge*>();
+            AST_edges = map<string, AST_edge*>();
             sorted_classes = vector<string>();
         }
 
@@ -226,7 +226,7 @@ class semantics{
         void pop_Builtins(){
 
             type_node program("PGM");
-            program.parent = "obj";
+            program.parent = "Obj";
             hierarchy("PGM") = program;
 
             type_node obj("Obj");
@@ -274,13 +274,13 @@ class semantics{
 
                 AST::Method *constructor = (AST::Method *) & (elm -> constructor_);
                 AST::Ident *return_ = (ASt::Ident*) * (constructor -> returns_)
-                node.construct.return_type = return_->text_;
+                node.constructor.return_type = return_->text_;
 
                 AST::Formals* formals_node = (AST::Formals*) & (constructor -> formals_);
                 vector<AST::Formal *> formals = formals_node->elements_);
                 for(AST::Formal *formal: formals){
                     AST::Ident *type = (AST::Ident *) & (formal -> type_);
-                    node.construct.formal_arg_types.push_back(type -> text_);
+                    node.constructor.formal_arg_types.push_back(type -> text_);
                 }
 
                 AST::Block* block_node = (AST::Block*) & (constructor -> statements_);

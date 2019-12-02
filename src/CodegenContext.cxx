@@ -1,6 +1,7 @@
 #include <ostream>
 #include <map>
-#include <CodegenGenContext.h>
+// #include "CodegenContext.h"
+#include "CodegenContext.h"
 #include "semantics.h"
 #include "semantics.cxx"
 #include "ASTNode.h"
@@ -9,7 +10,9 @@
 using namespace std;
 
 
-void GenContext::emit(std::string s) {object_code << " " s << endl;}
+void GenContext::emit(std::string s) {
+    object_code << s << endl;
+}
 
 std::string GenContext::alloc_reg(string type) {
     int reg_num = next_reg_num++;
@@ -28,16 +31,16 @@ std::string GenContext::get_type(AST::ASTNode& node){
     class_and_methods class_and_method;
     std::map<std::string, std::string>* vars;
     if (method_name == "constructor"){
-        class_and_method = class_node.construct;
+        class_and_method = class_node.constructor;
         vars = class_and_method.vars;
     }
     else{
-        if (method_name == "__pgm__"){
+        if (method_name == "PGM"){
             vars = &class_node.instance_vars;
         }
         else{
             class_and_method = class_node.methods[method_name]
         }
     }
-    std::string var_type = node.get_type(vtable, stc, class_name)
+    std::string var_type = node.get_type(stc, vtable, class_name)
 }

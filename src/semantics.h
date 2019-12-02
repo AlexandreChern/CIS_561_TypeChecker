@@ -40,3 +40,4 @@ class class_and_methods {
         std::cout << "\t class_method: " << this->class_method << std::endl;
     }
 }
+#endif // ASTNODE_H

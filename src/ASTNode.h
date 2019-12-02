@@ -542,7 +542,7 @@ namespace AST {
 
         int type_inference(semantics* stc, map<string,string> vtable, class_and_methods* info) override;
         int init_check(set<string>* vars) override{
-            if (constructor_.init_check(vars) && methods_init_check(vars)) {
+            if (constructor_.init_check(vars) && methods_.init_check(vars)) {
                 return 1;
             }
             return 0;
@@ -659,7 +659,7 @@ namespace AST {
                 actuals += ", ";
             }
             int string_len = actuals.length();
-            acutals = actuals.erase(string_len - 2, 2);
+            actuals = actuals.erase(string_len - 2, 2);
             return actuals;
         } 
     };
