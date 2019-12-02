@@ -1,6 +1,6 @@
 #include <ostream>
 #include <map>
-#include <CodegenContext.h>
+#include <CodegenGenContext.h>
 #include "semantics.h"
 #include "semantics.cxx"
 #include "ASTNode.h"
@@ -9,21 +9,21 @@
 using namespace std;
 
 
-void Context::emit(std::string s) {object_code << " " s << endl;}
+void GenContext::emit(std::string s) {object_code << " " s << endl;}
 
-std::string Context::alloc_reg(string type) {
+std::string GenContext::alloc_reg(string type) {
     int reg_num = next_reg_num++;
     string reg_name = "tmp__" + std::to_string(reg_num);
     object_code << "obj_" << type << " " << reg_name << ";" << endl;
     return reg_name;
 }
 
-void Context::free_reg(std::string reg){
+void GenContext::free_reg(std::string reg){
     this->emit(std::string("// free register") + reg);
 }
 
 
-std::string Context::get_type(AST::ASTNode& node){
+std::string GenContext::get_type(AST::ASTNode& node){
     type_node class_node = stc->hierarchy[class_name];
     class_and_methods class_and_method;
     std::map<std::string, std::string>* vars;

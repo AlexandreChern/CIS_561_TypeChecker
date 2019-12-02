@@ -3,9 +3,100 @@
 //
 
 #include "ASTNode.h"
+#include "semantics.h"
+#include "semantics.cxx"
+#include <typeinfo>
+
+using namespace std;
 
 namespace AST {
     // Abstract syntax tree.  ASTNode is abstract base class for all other nodes.
+
+    // Add type_inference files
+
+    int Program::init_check(set<string>* vars, semantics* stc){
+
+    }
+
+    int Program::type_inference(semantics* stc, map<string,string>, class_and_methods* info){
+
+    }
+
+    int Typecase::type_inference(){
+
+    }
+
+    int TypeAlternative::type_inference(){
+
+    }
+
+    int Construct::type_inference(){
+
+    }
+
+    int If::type_inference(){
+
+    }
+
+
+    int Call::type_inference(){
+
+    }
+
+    int AssignDeclare::type_inference(){
+
+    }
+
+    int Assign::type_inference(){
+
+    }
+
+    int Methods::type_inference(){
+
+    }
+
+    int Classes::type_inference(){
+
+    }
+
+    int Class::type_inference(){
+
+    }
+
+
+    int Return::type_inference(){
+
+
+    }
+
+
+    string Construct::get_type(semantics* stc, map<string,string>* vtable, string class_name){
+
+    }
+
+    string Call::get_type(semantics* stc, map<string,string>* vtable, string class_name){
+
+    }
+
+    string Ident::get_type(semantics* stc, map<string,string>* vtable, string class_name){
+
+    }
+
+    string Dot::get_type(semantics* stc, map<string,string>* vtable, string class_name){
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     // JSON representation of all the concrete node types.
