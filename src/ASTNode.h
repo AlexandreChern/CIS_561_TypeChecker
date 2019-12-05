@@ -35,7 +35,7 @@ namespace AST {
 
     class ASTNode {
     public:
-        virtual std::int eval(EvalContext &ctx) = 0;
+        // virtual std::int eval(EvalContext &ctx) = 0;
         virtual std::string gen_rvalue(GenContext *ctx, std::string target_reg) {
             std::cout << "GENERATE RVALUE NOT IMPLEMENTED" << endl; return "";
             }
@@ -56,12 +56,13 @@ namespace AST {
             return 0;
         }
 
-        virtual int type_inference(semantics* stc, map<std::string,std::string>* vtable, std::string class_name){
+        virtual std::string type_inference(semantics* stc, map<std::string,std::string>* vtable, std::string class_name){
             cout << "TYPE INFERENCE NOT INPLEMENTED" << endl;
-            return 0;
+            return "TYPE INFERENCE NOT IMPLEMENTED";
         }
 
-        virtual void json(std::ostream& out, AST_print_context& ctx) = 0;  // Json string representation
+        virtual void json(std::ostream& out, AST_print_context& ctx) = 0; 
+
         virtual std::string get_vars(std::map<std::string, std::string>* vtable) {std::cout << "GET VARS" <<endl;} // Need to be added
         virtual std::string get_var(){std::cout << "GET VAR" << std::endl; return "";}
         virtual std::string get_type(std::map<std::string, std::string>* vtable, semantics* stc, std::string class_name){
@@ -84,11 +85,11 @@ namespace AST {
     class Stub : public ASTNode {
         std::string name_;
     public:
-        int type_inference(semantics* stc, map<std::string, std::string>* vt, class_and_methods* info){
-            std::cout << "STUB TYPE INFER UNIMPLEMENTED" << std::endl;
-            return 0;
+        std::string type_inference(semantics* stc, map<std::string, std::string>* vt, class_and_methods* info){
+            std::cout << "STUB TYPE INFERENCE UNIMPLEMENTED" << std::endl;
+            return "STUB TYPE INFERENCE NOT IMPLEMENTED";
         }
-        explicit Stub(std::string name) : name_{name} {}
+        explicit Stub(std::string name) : name_{name} {};
         void json(std::ostream& out, AST_print_context& ctx) override;
     };
 
@@ -127,7 +128,7 @@ namespace AST {
             return ;
         }
 
-        int type_inference(semantics* stc, std::map<std::string, std::string>* vtable, methods* info) //override;
+        std::string type_inference(semantics* stc, std::map<std::string, std::string>* vtable, methods* info) //override;
         {
             info->print()
             int return_val = 0;
@@ -202,11 +203,8 @@ namespace AST {
             }
             return 0;
         }
-        std::string get_type(std::map<std::string, std::string>* vtable, semantics* stc, std::string class_name) override;
 
-        int type_inference(semantics* stc, std::map<std::string, std::string>* vtable, class_and_methods* info) override{
-            return 0;
-        }
+        std::string type_inference(semantics* stc, std::map<std::string, std::string>* vtable, class_and_methods* info);
 
         explicit Ident(std::string txt) : text_{txt} {}
         void json(std::ostream& out, AST_print_context& ctx) override;
@@ -220,19 +218,7 @@ namespace AST {
     class Block : public Seq<ASTNode> {
     public:
         explicit Block() : Seq("Block") {}
-        int type_inference(semantics* stc, std::map<std::string, std::string>* vtable, methods* info) override {
-            info -> print();
-            int return_val = 0;
-            for (ASTNode* stmt: elements_){
-                if (stmt -> type_inference(stc, vtable, info)){
-                    return_val = 1;
-                };
-            }
-            return return_val;
-        }
-     };
-
-
+    };
 
     /* Formal arguments list is a list of
      * identifier: type pairs.
@@ -244,12 +230,12 @@ namespace AST {
         explicit Formal(ASTNode& var, ASTNode& type_) :
             var_{var}, type_{type_} {};
         
-        int type_inference(semantics* stc, std::map<std::string, std::string>* vtable, methods* info) override {
+        std::string type_inference(semantics* stc, std::map<std::string, std::string>* vtable, methods* info) override {
             std::string var = var_.get_var()
             std::cout << typeid(type_).name() << std::endl;
             std::string type = type_.get_var();
             (*vtable)[var] = type;
-            return 0;
+            return type;
         }
         int init_check(std::set<std::string>* vars) override{
             vars -> insert(var_.get_var());
@@ -275,11 +261,10 @@ namespace AST {
         explicit Method(ASTNode& name, Formals& formals, ASTNode& returns, Block& statements) :
           name_{name}, formals_{formals}, returns_{returns}, statements_{statements} {}
         
-        int type_inference(semantics* stc, std::map<std::string,std::string>* vtable, class_and_methods* info) override{
-            int return_val = 0;
-            int formal_return_val = formals_.type_inference(stc, vtable, info);
-            int statement_return_val = statements_.type_inference(stc, vtable, info);
-            return formal_return_val || statement_return_val;
+        std::string type_inference(semantics* stc, std::map<std::string,std::string>* vtable, class_and_methods* info) override{
+            std::string formal_return_val = formals_.type_inference(stc, vtable, info);
+            std::string statement_return_val = statements_.type_inference(stc, vtable, info);
+            return "";
         }
 
         int init_check(std::set<std::string>* vars) override {
@@ -297,7 +282,7 @@ namespace AST {
     class Methods : public Seq<Method> {
     public:
         explicit Methods() : Seq("Methods") {}
-        int type_inference(semantics* stc, std::map<std::string, std::string>* vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, std::map<std::string, std::string>* vtable, class_and_methods* info) override;
     };
 
 
@@ -323,7 +308,7 @@ namespace AST {
             std::string type = ctx->get_type(lexpr_);
             std::string reg = ctx->alloc_reg(type);
             std::string loc = lexpr_.gen_lvalue(ctx);
-            rexpr_.gen_rvalue(ctx, reg)
+            rexpr_.gen_rvalue(ctx, reg);
             ctx->emit(loc + " = " + reg + ";");
         }
 
@@ -334,7 +319,7 @@ namespace AST {
             }
         }
 
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
         int init_check(set <string>* vars) override{
             if (rexpr_.inie_check(vars)){
                 return 1;
@@ -357,7 +342,7 @@ namespace AST {
         explicit AssignDeclare(ASTNode &lexpr, ASTNode &rexpr, Ident &static_type) :
             Assign(lexpr, rexpr), static_type_{static_type} {}
 
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
         void json(std::ostream& out, AST_print_context& ctx) override;
 
     };
@@ -379,17 +364,22 @@ namespace AST {
         Load(LExpr &loc) : loc_{loc} {}
 
         void gen_rvalue(GenContext *ctx, std::string target_reg) override{
-            cout << "--------- LOAD::GEN_RVALUE NOT IMPLEMENTED --------" << endl; 
+            std::string var = get_var();
+            std::string loc = ctx->get_local_var(var);
+            ctx->emit(target_reg + " = " + loc + ";");
         }
+
+        void get_lvalue(GenContext* ctx, std::string target_reg) override{
+            std::string var = get_var();
+            return ctx->get_local_var();
+        }
+
         std::string get_var() override {return loc_.get_var();}
         void get_vars(map<string,string>* vtable) override {return;}
-        std::string get_type(map<string,string>* vtable, semantics* stc, string class_name) override{
-            std::string result = loc_.get_type(vtable, stc, class_name);
-            return result; 
-        }   
+
 
         int init_check(set<string>* vars) override {return 0;}
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override {
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override {
             return loc_.type_inference(stc, vtable, info);
         }
 
@@ -406,7 +396,7 @@ namespace AST {
         
         explicit Return(ASTNode& expr) : expr_{expr}  {}
 
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
         int init_check(set<string>* vars) override{
             if (expr_.init_check(vars)) {return 1;}
             return 0;
@@ -429,10 +419,10 @@ namespace AST {
                 ctx->emit(then_part + ":;");
                 truepart_.gen_rvalue(ctx, target_reg);
                 ctx->emit(std::string(":goto ") + end_part + ";");
-                ctx->emit(elsepart + ": ;");
+                ctx->emit(else_part + ": ;");
                 falsepart_.gen_rvalue(ctx,target_reg);
                 ctx->emit(end_part + ":;");
-        }
+        };
 
 
         explicit If(ASTNode& cond, Seq<ASTNode>& truepart, Seq<ASTNode>& falsepart) :
@@ -443,7 +433,7 @@ namespace AST {
             set<string>* true_set = new set<string>(*vars);
             set<string>* false_set = new set<string>(*vars);
 
-            if (truepart_.init_check(true_set) && falsepart_.init_check(false_set)) {return 1;}
+            if (truepart_.init_check(true_set) || falsepart_.init_check(false_set)) {return 1;}
             // if (falsepart_.init_check(false_set)) {return 1;}
             for (set<string>::iterator iter=true_set->begin(); iter!=true_set->end(); iter++){
                 if (false_set->count(*iter)) {
@@ -453,7 +443,7 @@ namespace AST {
             return 0;
         }
         
-        void type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
 
         void json(std::ostream& out, AST_print_context& ctx) override;
     };
@@ -474,17 +464,18 @@ namespace AST {
             cond_.gen_branch(ctx, loop_part, end_part);
             ctx->emit(loop_part + ": ;");
             body_.gen_rvalue(ctx, target_reg);
-            ctx->emit("goto " + checkpart + ";");
+            ctx->emit("goto " + check_part + ";");
             ctx->emit(end_part + ": ;"); 
         }
 
-        int type_inference(semantic* stc, map<string,string>* vtable, class_and_methods* info) override {
-            string cond_type = cond_.get_type(stc, vtable, info->class_name);
+        std::string type_inference(semantic* stc, map<string,string>* vtable, class_and_methods* info) override {
+            string cond_type = cond_.type_inference(stc, vtable, info);
             if (cond_type != "Boolean"){
                 cout << "------- CONDITION NOT BOOLEAN TYPE ----------" << endl;
                 return 0;
             }
-            return body_.type_interence(stc, vtable, info);
+            std::string inference_result = body_.type_interence(stc, vtable, info);
+            return inference_result;
         }
 
 
@@ -540,9 +531,9 @@ namespace AST {
         }
         void get_vars(map<string, string>* vtable) override {return;}
 
-        int type_inference(semantics* stc, map<string,string> vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, map<string,string> vtable, class_and_methods* info) override;
         int init_check(set<string>* vars) override{
-            if (constructor_.init_check(vars) && methods_.init_check(vars)) {
+            if (constructor_.init_check(vars) || methods_.init_check(vars)) {
                 return 1;
             }
             return 0;
@@ -569,7 +560,7 @@ namespace AST {
             }
         }
 
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
     };
 
 
@@ -584,11 +575,8 @@ namespace AST {
             ctx->emit(target_ret + " = int_literal(" + to_string(value_) + ");");
         }
 
-        std::string get_type(semantics* stc, map<string,string>* vtable, string class_name) override{
-            return "Int";
-        }
 
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override {return 0;}
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override {return 0;}
 
         int init_check(set<string>* vars) override {return 0;}
 
@@ -606,7 +594,7 @@ namespace AST {
         std::string get_var() override {return "";}
         void get_vars(map<string,string>* vtable) override {return;}
 
-        int type_inference(semantics* stc, map<string,string> vtable, class_and_methods* info) override; 
+        std::string type_inference(semantics* stc, map<string,string> vtable, class_and_methods* info) override; 
     };
 
     class Type_Alternatives : public Seq<Type_Alternative> {
@@ -621,7 +609,7 @@ namespace AST {
         explicit Typecase(Expr& expr, Type_Alternatives& cases) :
                 expr_{expr}, cases_{cases} {};
         void json(std::ostream& out, AST_print_context& ctx) override;
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
     };
 
 
@@ -633,10 +621,6 @@ namespace AST {
 
         void gen_rvalue(GenContext* ctx, std::string target_reg) override{
             ctx->emit(target_reg + " = str_literal(" + value_ + ");");
-        }
-
-        std::string get_type(semantics* stc, map<string,string>* vtable, string class_name) override{
-            return "string";
         }
 
         int init_check(set<string>* vars) override {return 0;}
@@ -678,12 +662,10 @@ namespace AST {
 
         void json(std::ostream& out, AST_print_context& ctx) override;
 
-        string get_type(semantics* stc, map<string,string>* vtable, string class_name) override;
-
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
 
         int init_check(set<string>* vars) override{
-            if (method_.init_check(vars) && actuals_.init_check(vars)){
+            if (method_.init_check(vars) || actuals_.init_check(vars)){
                 return 1;
             }
             return 0;
@@ -727,15 +709,13 @@ namespace AST {
             ctx->emit(target_reg + " = " + receiver_reg + "->clazz->" + method_name + "(" + receiver_reg + ", " + actuals + ");");
         }
 
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
         int init_check(set<string>* vars) override {
-            if (receiver_.init_check(vars) && method_.init_check(vars) && actuals_.init_check(vars)){
+            if (receiver_.init_check(vars) || method_.init_check(vars) || actuals_.init_check(vars)){
                 return 1;
             }
             return 0;
         }
-
-        std::string get_type(semantics* stc, map<string,string>* vtable,  class_and_methods* info) overide;
     };
 
 
@@ -759,17 +739,17 @@ namespace AST {
        explicit And(ASTNode& left, ASTNode& right) :
           BinOp("And", left, right) {}
 
-        std::string get_type(semantics* stc, map<string,string>* vtable, string class_name) override{
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override{
+            std::string left_type =left_.type_inference(stc, vtable, info);
+            std::string reght_type = reight_.type_inference(stc, vtable, info);
+            if(left_type != "Booleen" || right_type != "Boolean"){
+                return "TypeError: Not Boolean";
+            }
             return "Boolean";
-        } 
-
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override{
-            cout << "-------- TYPE INFERNECE NOT IMPLEMENTED -------------" << endl;
-            return 0;
         }
 
         int init_check(set<string>* vars) override {
-            if (left_.init_check(vars) && right_.init_check(vars)){
+            if (left_.init_check(vars) || right_.init_check(vars)){
                 return 1;
             }
             return 0;
@@ -781,17 +761,17 @@ namespace AST {
         explicit Or(ASTNode& left, ASTNode& right) :
                 BinOp("Or", left, right) {}
 
-         std::string get_type(semantics* stc, map<string,string>* vtable, string class_name) override{
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override{
+            std::string left_type =left_.type_inference(stc, vtable, info);
+            std::string reght_type = reight_.type_inference(stc, vtable, info);
+            if(left_type != "Booleen" || right_type != "Boolean"){
+                return "TypeError: Not Boolean";
+            }
             return "Boolean";
-        } 
-
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override{
-            cout << "-------- TYPE INFERNECE NOT IMPLEMENTED -------------" << endl;
-            return 0;
         }
 
         int init_check(set<string>* vars) override {
-            if (left_.init_check(vars) && right_.init_check(vars)){
+            if (left_.init_check(vars) || right_.init_check(vars)){
                 return 1;
             }
             return 0;
@@ -809,13 +789,12 @@ namespace AST {
         void json(std::ostream& out, AST_print_context& ctx) override;
 
 
-        std::string get_type(semantics* stc, map<string,string>* vtable, string class_name) override{
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override{
+            std::string left_type = left_.type_inference(stc, vtable, info);
+            if (left_type != "Boolean") {
+                return "TypeError: Not Boolean";
+            }
             return "Boolean";
-        } 
-
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override{
-            cout << "-------- TYPE INFERNECE NOT IMPLEMENTED -------------" << endl;
-            return 0;
         }
 
         int init_check(set<string>* vars) override {
@@ -849,7 +828,6 @@ namespace AST {
 
         void get_vars(map<string,string>* vtable) override {return ;}
 
-        std::string get_type(semantics* stc, map<string,string>* vtable, string class_name) override;
 
         int type_inferene(semantics* stc, map<string,string>* vtable, class_and_methods* info) override {
             left_.type_inference(stc, vtable, info);
@@ -891,7 +869,7 @@ namespace AST {
             statements_.get_rvalue(&class_ctx, target_reg);
         }
 
-        int type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
+        std::string type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info) override;
         string get_var() override {return "";}
         void get_vars(map<string,string>* vtable) override {return;}
         int init_check(semantics* stc, set<string>* vars) override;

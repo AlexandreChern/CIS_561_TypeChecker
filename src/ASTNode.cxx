@@ -15,56 +15,99 @@ namespace AST {
     // Add type_inference files
 
     int Program::init_check(set<string>* vars, semantics* stc){
+        for (map<std::string,type_node>::iterator iter=stc->heirarchy.begin(); iter!=stc->heirarchy.end(),iter ++){
+            vars->insert(iter->first);
+            type_node class_node = iter->second;
+            map<std::string,class_and_methods> methods = class_node.methods;
+            for (map<std::string,class_and_methods>::iterator iter=methods.begin(); iter!=methods.end(),iter++){
+                vars->insert(iter->first);
+            }
+        }
+        if(classes_.init_check(vars) || statements_.init_check(vars)){
+            return 1;
+        }
+        return 0;
+    }
+
+    std::string Program::type_inference(semantics* stc, map<string,string>*vtable, class_and_methods* info){
+            classes_.type_inference(stc, vtable, info);
+            class_and_methods* program_info = new class_and_methods("PGM");
+            map<std::string,std::string>* program_vtable = &(stc->hierarchy)["PGM"].instance_vars;
+            statements_.type_inference(stc,program_vtable, program_info);
+            return "TYPE INFERENCE FOR PROGRAM"
+    }
+
+    std::string Typecase::type_inference(semantics* stc, map<string,string>*vtable, class_and_methods* info){
+        expr_.type_inference(stc, vtable, info);
+        cases_.type_inference(stc,vtable, info);
+        return "TYPE INFERENCE FOR TYPECASE";
+    }
+
+    std::string TypeAlternative::type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info){
+        ident_.type_inference(stc,vtable,info);
+        classname_.type_inference(stc,vtable,info);
+
+        map<std::string,std::string>* local_vtable = new map<std::string, std::string>(*vtable);
+        (*local_vtable)[ident_.get_var()] = classname_.get_var();
+        block_.type_inference(stc,vtable, info);
+        return "TYPE INFERENCE FOR TYPE ALTERNATIVE"
 
     }
 
-    int Program::type_inference(semantics* stc, map<string,string>, class_and_methods* info){
+    std::string Construct::type_inference(){
+        actuals_.type_inference(stc, vtable, info);
+        map<std::string, type_node> hierarchy = stc->hierarchy;
+        std::string method_name = method_.get_var();
+        type_node class_node = hierarchy[method_name];
+        class_and_methods constructor_table = class_node.constructor;
+
+        if (constructor_table.formal_arg_types.size()!= actuals_.elements.size()){
+            return "TYPE INFERENCE ERROR FOR CONSTRUCTOR";
+        }
+
+        for (int i=0; i < actuals_.element_.size(); i++){
+            std::string formal_type = constructor_table.formal_arg_types[i];
+            std::string actual_type = actuals_.elements_[i]->type_inference(stc, vtable, info);
+            if(!stc -> is_subtype(actual_type, formal_type)){
+                cout << "TYPE INFERENCE ERROR" << endl;
+                return "TYPE INFERENCE ERROR";
+            }
+        }
+        return method_name;
 
     }
 
-    int Typecase::type_inference(){
-
-    }
-
-    int TypeAlternative::type_inference(){
-
-    }
-
-    int Construct::type_inference(){
-
-    }
-
-    int If::type_inference(){
-
+    std::string If::type_inference(){
+        
     }
 
 
-    int Call::type_inference(){
+    std::string Call::type_inference(){
 
     }
 
-    int AssignDeclare::type_inference(){
+    std::string AssignDeclare::type_inference(){
 
     }
 
-    int Assign::type_inference(){
+    std::string Assign::type_inference(){
 
     }
 
-    int Methods::type_inference(){
+    std::string Methods::type_inference(){
 
     }
 
-    int Classes::type_inference(){
+    std::string Classes::type_inference(){
 
     }
 
-    int Class::type_inference(){
+    std::string Class::type_inference(){
 
     }
 
 
-    int Return::type_inference(){
+    std::string Return::type_inference(){
 
 
     }
