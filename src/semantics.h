@@ -1,6 +1,5 @@
-
-#ifndef ASTNODE_H
-#define ASTNODE_H
+#ifndef SEMANTICS_H
+#define SEMANTICS_H
 
 #include <string>
 #include <sstream>
@@ -9,35 +8,25 @@
 #include <typeinfo>
 #include <map>
 
+
+
+
 using namespace std;
-
-
-using namespace AST{
-    int Program::init_check(){
-        // to be implemented
-    }
-
-    int Program::type_inference(){
-        //
-    }
-
-    
-}
-
-class semantics;
 
 class class_and_method {
     public:
         std::string class_name;
-        std::string class_method;
+        std::string method_name;
 
-        class_and_method(std::string class_name, std::string class_method){
+        class_and_method(std::string class_name, std::string method) {
             this->class_name = class_name;
-            this->class_method = class_method;
+            this->method_name = method;
         }
-    void print_method(){
-        std::cout << "\t class_name: " << this->class_name << std::endl;
-        std::cout << "\t class_method: " << this->class_method << std::endl;
-    }
-}
-#endif // ASTNODE_H
+
+};
+
+
+
+
+
+#endif // SEMANTICS_H

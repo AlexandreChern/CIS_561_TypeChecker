@@ -5,7 +5,7 @@
 
 REFLEX_INCLUDE = /usr/local/include/reflex
 REFLEX = reflex --bison-cc --bison-locations --header-file
-BISON = /usr/local/Cellar/bison/3.4.2/bin/bison
+BISON = bison
 CC = g++ -std=c++11
 BIN = ../bin
 PRODUCT = $(BIN)/parser
@@ -38,15 +38,15 @@ lex.yy.cxx lex.yy.h:  quack.lxx
 quack.tab.cxx quack.tab.hxx location.hh position.hh stack.hh: quack.yxx
 	$(BISON) --defines --debug --token-table --report=all $<
 
-%.o: %.cxx ASTNode.h semantics.h semantics.cxx
+%.o: %.cxx ASTNode.h CodegenContext.h semantics.cxx semantics.h
 	$(CC) -c $^
 
 scanner: scanner.o lex.yy.o
 	$(CC) -o scanner $^
 
-parser.o: quack.tab.hxx lex.yy.h semantics.h semantics.cxx
+parser.o: quack.tab.hxx lex.yy.h
 
-$(BIN)/parser: parser.o quack.tab.o lex.yy.o ASTNode.o Messages.o
+$(BIN)/parser: parser.o quack.tab.o lex.yy.o ASTNode.o Messages.o CodegenContext.o semantics.o
 	$(CC) $^ -o $(BIN)/parser -L /usr/local/lib  -lreflex
 
 ## General recipes
