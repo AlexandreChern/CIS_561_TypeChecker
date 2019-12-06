@@ -16,7 +16,7 @@ class class_and_methods {
         vector<string> formal_arg_types;
         map<string, string>* vars;
 
-        string inhereted_from;
+        string inherited_from;
 
         class_and_methods(){
             formal_arg_types = vector<string>();
@@ -30,37 +30,37 @@ class class_and_methods {
         }
 
     void print_method() {
-        cout << "\t " << "method_name: " << method_name << endl;
-        cout << "\t " << "return_type: " << return_type << endl;
-        cout << "\t " << "formal_arg_types: " << formal_arg_types << endl;
+        std::cout << "\t " << "method_name: " << method_name << std::endl;
+        std::cout << "\t " << "return_type: " << return_type << std::endl;
+        std::cout << "\t " << "formal_arg_types: " << formal_arg_types << std::endl;
 
         for (string formal_arg: formal_arg_types){
-            cout << formal_arg << ", ";
+            std::cout << formal_arg << ", ";
         }
 
-        cout << endl;
+        std::cout << std::endl;
 
-        cout << "\t " << "variables: " << endl;
+        std::cout << "\t " << "variables: " << std::endl;
         for (map<string,string>::iterator iter = vars->begin(); iter != vars->end();iter++) {
-            cout << "\t " << iter->first << ": " << iter->second << endl;
+            std::cout << "\t " << iter->first << ": " << iter->second << std::endl;
         } 
-        cout << "\t " << "inhereted_from" << inhereted_from << endl;
-        cout << endl;
+        std::cout << "\t " << "inherited_from" << inherited_from << std::endl;
+        std::cout << endl;
     }
     
 };
 
 class type_node {
     public:
-        string var_type;
-        string parent;
+        std::string var_type;
+        std::string parent;
 
-        map<string, string> instance_vars;
-        map<string, class_and_methods> methods;
+        map<std::string, std::string> instance_vars;
+        map<std::string, std::class_and_methods> methods;
 
         class_and_methods constructor;
         int resolved;
-        vector<string> method_list;
+        vector<std::string> method_list;
 
     type_node(){
         instance_vars = map<string, string>();
@@ -133,7 +133,7 @@ class semantics{
         //     cout << "\t semantic error" << endl;
         // };
         int found_error;
-        int modified = 1;
+        int modified;
 
         map<string, type_node> hierarchy;
         map<string, AST_edge*> AST_edges;
@@ -303,7 +303,7 @@ class semantics{
                         AST::Ident *type = (AST::Ident*) & (formal->type_);
                         new_method.formal_arg_types.push_back(type->text_)
                     }
-                    new_method.inhereted_from = class_name;
+                    new_method.inherited_from = class_name;
                     node.methods[new_method.method_name] = new_method;   
                 }
                 hierarch[class_name] = node;

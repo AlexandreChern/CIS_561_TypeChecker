@@ -8,6 +8,7 @@
 #include <typeinfo>
 
 using namespace std;
+class class_and_method;
 
 namespace AST {
     // Abstract syntax tree.  ASTNode is abstract base class for all other nodes.
@@ -29,7 +30,7 @@ namespace AST {
         return 0;
     }
 
-    std::string Program::type_inference(semantics* stc, map<string,string>*vtable, class_and_methods* info){
+    std::string Program::type_inference(semantics* stc, map<string,string>*vtable, class_and_method* info){
             classes_.type_inference(stc, vtable, info);
             class_and_methods* program_info = new class_and_methods("PGM");
             map<std::string,std::string>* program_vtable = &(stc->hierarchy)["PGM"].instance_vars;
@@ -37,13 +38,13 @@ namespace AST {
             return "TYPE INFERENCE FOR PROGRAM"
     }
 
-    std::string Typecase::type_inference(semantics* stc, map<string,string>*vtable, class_and_methods* info){
+    std::string Typecase::type_inference(semantics* stc, map<string,string>*vtable, class_and_method* info){
         expr_.type_inference(stc, vtable, info);
         cases_.type_inference(stc,vtable, info);
         return "TYPE INFERENCE FOR TYPECASE";
     }
 
-    std::string TypeAlternative::type_inference(semantics* stc, map<string,string>* vtable, class_and_methods* info){
+    std::string TypeAlternative::type_inference(semantics* stc, map<string,string>* vtable, class_and_method* info){
         ident_.type_inference(stc,vtable,info);
         classname_.type_inference(stc,vtable,info);
 
@@ -77,56 +78,136 @@ namespace AST {
 
     }
 
-    std::string If::type_inference(){
-        
+    std::string If::type_inference(semantics* stc, map<std::string,std::string>* vtable, class_and_method* info){
+        std::string cond_type = cond_.type_inference(stc, vtable, info);
+        if (cond_type != "Boolean"){
+            return "TYPE INFERENCE ERROR FOR IF"
+        }
+        truepart_.type_inference(stc, vtable, info);
+        falsepart_.type_inference(stc,vtable, info);
+        return "TYPE INFERENCE FOR IF";
     }
 
 
-    std::string Call::type_inference(){
+    std::string Call::type_inference(semantics* stc, map<std::string,std::string>* vtable, class_and_method* info){
+        std::string receiver_type = receiver_.type_inference(stc, vtable, info);
+        std::string method_name = method_.get_var();
+        method_.type_inference(stc,vtable, info);
+        actuals_.type_inference(stc,vtable,info);
+        map<std::string,type_node> hierarchy = stc->hierarchy;
+        type_node receiver_node = hierarchy[receiver_type];
+        map<std::string, class_and_methods*> methods = recver_node.methods;
+        if (!methods.count(method_name)){
+            while(true){
+                std::string parent_name = receiver_node.parent;
+                type_node = parent_node = hierarchy[parent_name];
+                methods = parent_node.methods;
+                if(methods.count(method_name)){break;}
+                if(class_name = "Obj"){
+                    return "TYPE INFERENCE ERROR FOR CALL";
+                }
+            }
+        }
+        class_and_methods* class_and_methods_table = methods[method_name];
+        if (class_and_methods_table.formal_arg_types.size() != actuals_.elements_.size()){
+            return "TYPE INFERENCE ERROR FOR CALL";
+        }
+
+        for (int i = 0; i < actuals_.elements_.size();i++){
+            std::string formal_type = class_and_methods_table.formal_arg_types[i];
+            std::string actual_type = actuals_.elements_[i]->type_inference(stc, vtable, info);
+            if (!stc->is_subtype(actual_type, formal_type)){
+                return "TYPE INFERENCE ERROR FOR CALL";
+            }
+        }
+        return class_and_methods_table.return_type;
 
     }
 
-    std::string AssignDeclare::type_inference(){
+    std::string AssignDeclare::type_inference(semantics* stc, map<std::string,std::string>* vtable, class_and_method* info){
+        lexpr_.type_inference(stc, vtable, info);
+        std::string rtype =  repxr_.type_inference(stc, vtable, info);
+        std::string lvar = lexpr_.get_var();
+        std::string static_type = static_type_.get_var();
+        map<std::string,std::string> instance_vars = (stc->hierarchy)[info->class_name].instance_vars;
+        if (!vtable->count(lvar)){
+            if (instance_vars.count(lvar)){
+                (*vtable)[lvar] = instance_vars[lvar];
+            }
+            else{
+                (*vtable)[lvar] = static_type;
+                stc->modified=1;
+            }
+        }
+        std::string ltype = (*vtable)[lvar];
+        std::string lca = stc->get_LCA(ltype,rtype);
+        if (ltype!= lca){
+            if (!(stc->is_subtype(lca, static_type))){
+                (*vtable)[lvar] = "TYPE ERROR";
+                std::cout << "TYPE ERROR" << std::endl;
+            }
+            (*vtable)[lvar] = lca;
+            stc->modified = 1;
+        }
 
+        return "TYPE INFERENCE FOR ASSIGNDECLARE";
     }
 
     std::string Assign::type_inference(){
+        lexpr_.type_inference(stc, vtable, info);
+        std::string rtype = rexpr_.type_inference(stc, vtable, info);
+        std::string lvar = lexpr_.get_var();
+        map<std::string,std::string> instance_vars=(stc->hierarchy)[info->class_name].instance_vars;
+        if(!vtable->count(lvar)){
+            if (instance_vars.count(lvar)){
+                (*vtable)[lvar] = instance_vars[lvar];
+            }
+            else{
+                (*vtable)[lvar] = rtype;
+                stc->modified=1;
+            }
+        }
+
+        std::string ltype = (*vt)[lvar];
+        std::string lca = stc->get_LCA(ltype,rtype);
+        if (ltype!= lca)
+    }
+
+    std::string Methods::type_inference(semantics* stc, map<std::string,std::string> vtable, class_and_method* info){
+        for (Method* method: elements_){
+            std::string method_name = method->name_.get_var();
+            type_node method_class = stc->hierarchy[info->class_name];
+            class_and_methods m_vars = method_class.methods[method_name];
+            map<std::string,std::string>* method_info = new class_and_method(info->class_name, method_name);
+            method->type_inference(stc, m_vars, method_info);
+            map<std::string, std::string> class_instance = method_class.instance_vars;
+            for(map<std::string,std::string>* iterator iter=m_vars->begin(); iter!=m_vars->end(); iter++){
+                if(class_instance.count(iter->first)){
+                    std::string method_type = iter->second;
+                    std::string class_type = class_instance[iter->first];
+                    if (!stc->is_subtype(method_type, class_type)){
+                        std::cout << "TYPE INFERENCE ERROR FOR METHODS" << std::endl;
+                    }
+                }
+            }
+        }
+        return "TYPE INFERENCE FOR METHODS";
 
     }
 
-    std::string Methods::type_inference(){
-
-    }
-
-    std::string Classes::type_inference(){
-
+    std::string Classes::type_inference(semantics* stc, map<std::string, std::string> vtable, class_and_method* info){
+        
     }
 
     std::string Class::type_inference(){
-
+            // Not Implemented
+            return "TYPE INFERENCE FOR CLASS";
     }
 
 
     std::string Return::type_inference(){
-
-
-    }
-
-
-    string Construct::get_type(semantics* stc, map<string,string>* vtable, string class_name){
-
-    }
-
-    string Call::get_type(semantics* stc, map<string,string>* vtable, string class_name){
-
-    }
-
-    string Ident::get_type(semantics* stc, map<string,string>* vtable, string class_name){
-
-    }
-
-    string Dot::get_type(semantics* stc, map<string,string>* vtable, string class_name){
-
+            // Not Implemented
+            return "TYPE INFERENCE FOR RETURN";
     }
 
 

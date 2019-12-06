@@ -43,9 +43,7 @@ public:
 
     std::string get_local_var(std::string &ident);
     std::string get_type(AST::ASTNode& node);
-    std::string new_branch_label(const char* prefix){
-        return std::string(prefix) + "_" + std::to_string(++next_label_num);
-    }
+    std::string new_branch_label(const char* prefix);
     void emit_instance_vars();
     // std::string get_formal_argtypes(std::string method_name){
     //     return std::to_string(++next_label_num) + "." + std::to_string(method_name); 
