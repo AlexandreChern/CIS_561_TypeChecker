@@ -137,18 +137,7 @@ class semantics {
             return 0;
         }
 
-        // void print_AST_hierarchy() {
-        //     cout << "---------------PRINT CLASS AST_hierarchy----------------" << endl;
-        //     for(map<string,AST_Type_Node>::iterator iter = AST_hierarchy.begin(); iter != AST_hierarchy.end(); iter++) {
-        //         AST_Type_Node node = iter->second;
-        //         // node.print_AST_Node();
-        //         cout << "--------------------------------" << endl;
-        //     }
-        // }
-
         void pop_AST_hierarchy() { 
-
-
             AST::Program *root = (AST::Program*) AST_root_init;
             AST::Classes classes_node = root->classes_;
             vector<AST::Class *> classes = classes_node.elements_;
@@ -181,7 +170,6 @@ class semantics {
                     stmt->get_vars(&node.instance_vars);
                 } 
 
-                // methods 
                 vector<AST::Method *> methods = (element->methods_).elements_;
                 for (AST::Method *method: methods) {
                     AST::Ident* method_name = (AST::Ident*) &(method->name_);
@@ -213,9 +201,10 @@ class semantics {
                 if (class_name == "Obj" || class_name == "PGM") {continue;}
                 AST_Type_Node *class_node = &AST_hierarchy[class_name];
                 map<string, class_and_methods> *class_methods = &class_node->methods;
+
                 string parent_type = class_node->parent_type;
                 AST_Type_Node *parent_node = &AST_hierarchy[parent_type];
-                for (string method: parent_node->method_list) {
+                for (std::string method: parent_node->method_list) {
                     class_node->method_list.push_back(method);
                 }
                 for (map<string, class_and_methods>::iterator iter = class_methods->begin(); iter != class_methods->end(); iter++) {
@@ -235,60 +224,52 @@ class semantics {
 
         int is_subtype(string sub, string super) {
             set<std::string> path = set<std::string>();
-            string type = sub;
-            if (!AST_hierarchy.count(type)) { // subtype not in class AST_hierarchy
+            std::string type = sub;
+            if (!AST_hierarchy.count(type)) { 
                 cout << "ERROR: Type Error" << endl;
                 return 0;
             }
+
+            if (path.count(super)) {
+                return 1;
+            }
+
             while (true) {
                 path.insert(type);
                 if (type == "Obj") { break; }
                 type = AST_hierarchy[type].parent_type;
             }
-            if (path.count(super)) {
-                return 1;
-            }
+            
             return 0;
         }
 
         string Type_LCA(string type_1, string type_2) {
 
-            if (type_1 == "Error" || type_1== "TypeError") { return type_2;}
-            if (type_2 == "Error" || type_1 == "TypeError") { return type_1;}
+            if (type_1 == "Error" || type_1== "TypeError") { return "TypeError";}
+            if (type_2 == "Error" || type_1 == "TypeError") { return "TypeError";}
 
-            if (!AST_hierarchy.count(type_1)) { 
-                return type_1; 
+            if (type_1 == type_2){
+                return type_1;
             }
-            if (!AST_hierarchy.count(type_2)) { 
-                return type_2; 
-            }
-            set<std::string> type_1_path = set<std::string>();
-            string type = type_1;
-            while (1) {
-                type_1_path.insert(type);
-                if (type == "Obj") { break; }
-                type = AST_hierarchy[type].parent_type;
-            }
-            type = type_2;
-            while (1) {
-                if (type_1_path.count(type)) {
+
+            else{
+                std::string type = type_1;
+                set<std::string> type_path = set<std::string>();
+            
+                while (true) {
+                    type_path.insert(type);
+                    if (type == "Obj") { break; }
+                    type = AST_hierarchy[type].parent_type;
+                }
+                type = type_2;
+                while (true) {
+                    if (type_path.count(type)) {
                     return type;
                 }
                 type = AST_hierarchy[type].parent_type;
+                }
             }
-        }
-
-        int compare_maps(map<string, string> map_1, map<string, string>map_2) {
-            // same types, proceed to compare maps here
-            if(map_1.size() != map_2.size())
-                return 0;  // differing sizes, they are not the same
-            typename map<std::string,std::string>::const_iterator i, j;
-            for(i = map_1.begin(), j = map_2.begin(); i != map_1.end(); ++i, ++j)
-            {
-                if(*i != *j)
-                return 0;
-            }
-            return 1;
+            
         }
 
         vector<std::string> split(string strToSplit, char delimeter)
@@ -386,7 +367,7 @@ class semantics {
             }
             topological_sort();
             inherit_methods();
-            // print_AST_hierarchy();
+
             AST::Program *root = (AST::Program*) AST_root_init;
             set<std::string> *vars = new set<std::string>;
             if (root->init_check(vars, this)) { 
