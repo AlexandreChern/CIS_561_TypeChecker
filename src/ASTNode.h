@@ -81,6 +81,7 @@ namespace AST {
                 node->gen_rvalue(ctx, target_reg);
             }
         }
+        
         std::string get_var() override {return "";}
         void get_vars(map<std::string, std::string>* v_table) override {return;}
         int init_check(set<std::string>* vars) override {
@@ -139,11 +140,9 @@ namespace AST {
             string gen_lvalue(GenContext *ctx) override {
                 return ctx->get_local_var(text_);
             }
-            void gen_rvalue(GenContext *ctx, string target_reg) override {
-                /* The lvalue, i.e., address of memory */
-                string loc = ctx->get_local_var(text_);
-                ctx->emit(target_reg + " = " + loc + ";");
-            }
+
+
+            void gen_rvalue(GenContext* ctx, std::string target_reg) override;
             std::string get_var() override {return text_;}
             void get_vars(map<std::string, std::string>* v_table) override {return;}
             std::string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override;
@@ -169,10 +168,9 @@ namespace AST {
             ASTNode& type_;
             explicit Formal(ASTNode& var, ASTNode& type_) :
                 var_{var}, type_{type_} {};
-            std::string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override {
-                //cout << "ENTERING Formal:type_inference" << endl;
-                string var = var_.get_var();
-                string type = type_.get_var();
+                std::string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override {
+                std::string var = var_.get_var();
+                std::string type = type_.get_var();
                 (*v_table)[var] = type;
                 return type;
             }
@@ -229,14 +227,8 @@ namespace AST {
         ASTNode &lexpr_;
         ASTNode &rexpr_;
     public:
-        void gen_rvalue(GenContext *ctx, std::string target_reg) override {
-            std::string type = ctx->get_type(lexpr_);
-            std::string reg = ctx->alloc_reg(type);
-            std::string loc = lexpr_.gen_lvalue(ctx);
-            rexpr_.gen_rvalue(ctx, reg);
-            /* Store the value in the location */
-            ctx->emit(loc + " = " + reg + ";");
-        }
+        void gen_rvalue(GenContext *ctx, std::string target_reg) override;
+
         void get_vars(map<std::string, std::string>* v_table) override {
             std::string var_name = lexpr_.get_var();
             if (var_name.rfind("this", 0) == 0) {
@@ -274,15 +266,10 @@ namespace AST {
         LExpr &loc_;
     public:
         Load(LExpr &loc) : loc_{loc} {}
-        void gen_rvalue(GenContext *ctx, std::string target_reg) override {
-            std::string var = get_var();
-            std::string loc = ctx->get_local_var(var);
-            ctx->emit(target_reg + " = " + loc + ";");
-        }
-        std::string gen_lvalue(GenContext *ctx) override {
-            std::string var = get_var();
-            return ctx->get_local_var(var);
-        }
+
+        void gen_rvalue(GenContext *ctx, std::string target_reg) override;
+        std::string gen_lvalue(GenContext* ctx) override;
+        
         std::string get_var() override {return loc_.get_var();}
         void get_vars(map<std::string, string>* v_table) override {return;}
         int init_check(set<string>* vars) override { return 0; }  
@@ -309,21 +296,8 @@ namespace AST {
         Seq<ASTNode> &truepart_; // Execute this block if the condition is true
         Seq<ASTNode> &falsepart_; // Execute this block if the condition is false
     public:
-        void gen_rvalue(GenContext* ctx, string target_reg) override {
-            std::string then_statement = ctx->new_branch_label("then");
-            std::string else_statement = ctx->new_branch_label("else");
-            std::string end_statement = ctx->new_branch_label("endif");
-            cond_.gen_branch(ctx, then_statement, else_statement);
-            /* Generate the 'then' part here */
-            ctx->emit(then_statement + ": ;");
-            truepart_.gen_rvalue(ctx, target_reg);
-            ctx->emit(std::string("goto ") + end_statement + ";");
-            /* Generate the 'else' part here */
-            ctx->emit(else_statement + ": ;");
-            falsepart_.gen_rvalue(ctx, target_reg);
-            /* That's all, folks */
-            ctx->emit(end_statement + ": ;");
-        }
+        void gen_rvalue(GenContext* ctx, string target_reg) override;
+        
 
         explicit If(ASTNode& cond, Seq<ASTNode>& truepart, Seq<ASTNode>& falsepart) :
             cond_{cond}, truepart_{truepart}, falsepart_{falsepart} { };
@@ -390,34 +364,8 @@ namespace AST {
             ASTNode& constructor_;
             Methods& methods_;
 
-            void gen_rvalue(GenContext *ctx, std::string target_reg) override {
-                string class_name = name_.get_var();
-                ctx->emit("struct class_" + class_name + "_struct;");
-                ctx->emit("struct obj_" + class_name + ";");
-                ctx->emit("typedef struct obj_" + class_name + "* obj_" + class_name + ";");
-                ctx->emit("typedef struct class_" + class_name + "_struct* class_" + class_name + ";");
-                ctx->emit("");
-                ctx->emit("typedef struct obj_" + class_name + "_struct {");
-                ctx->emit("class_" + class_name + " clazz;");
-                ctx->emit_instance_vars();
-                ctx->emit("} * obj_" + class_name + ";");
-                ctx->emit("");
-                ctx->emit("struct class_" + class_name + "_struct the_class_" + class_name + "_struct;");
-                ctx->emit("");
-                ctx->emit("struct class_" + class_name + "_struct {");
-                // constructor
-                ctx->emit("obj_" + class_name + " (*constructor) (" + ctx->get_formal_argtypes("constructor") + ");");
-                ctx->emit_method_signature(); // rest of the methods
-                ctx->emit("};\n");
-                ctx->emit("extern class_" + class_name + " the_class_" + class_name + ";");
-                // now populate constructor
-                ctx->emit("");
-                GenContext * construct_ctx = new GenContext(*ctx);
-                construct_ctx->method_name = "constructor";
-                constructor_.gen_rvalue(construct_ctx, target_reg);
-                methods_.gen_rvalue(ctx, target_reg);
-                ctx->emit_class_struct();
-            }
+            void gen_rvalue(GenContext *ctx, std::string target_reg) override;
+            
 
             explicit Class(Ident& name, Ident& super,
                     ASTNode& constructor, Methods& methods) :
@@ -436,14 +384,8 @@ namespace AST {
 
     class Classes : public Seq<Class> {
     public:
-        void gen_rvalue(GenContext *ctx, std::string target_reg) override {
-            for (Class *cls: elements_) {
-                string class_name = cls->name_.get_var();
-                GenContext class_ctx = GenContext(*ctx); // copy constructor
-                class_ctx.class_name = class_name;
-                cls->gen_rvalue(&class_ctx, target_reg);
-            }
-        }
+        void gen_rvalue(GenContext *ctx, std::string target_reg) override;
+
         explicit Classes() : Seq<Class>("Classes") {}
         std::string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override;
     };
@@ -480,8 +422,8 @@ namespace AST {
     };
 
     class Typecase : public Statement {
-        Expr& expr_; // An expression we want to downcast to a more specific class
-        Type_Alternatives& cases_;    // A case for each potential type
+        Expr& expr_; 
+        Type_Alternatives& cases_;   
     public:
         explicit Typecase(Expr& expr, Type_Alternatives& cases) :
                 expr_{expr}, cases_{cases} {};
@@ -504,28 +446,12 @@ namespace AST {
     class Actuals : public Seq<Expr> {
     public:
         explicit Actuals() : Seq("Actuals") {}
-        string gen_lvalue(GenContext *ctx) override {
-            vector<string> actualregs = vector<string>();
-            for (ASTNode *actual: elements_) {
-                string type = ctx->get_type(*actual);
-                string reg = ctx->alloc_reg(type);
-                actualregs.push_back(reg);
-                actual->gen_rvalue(ctx, reg);
-            }
-            string actuals = "";
-            for (string reg: actualregs) {
-                actuals += reg;
-                actuals += ", ";
-            }
-            int strlen = actuals.length();
-            actuals = actuals.erase(strlen - 2, 2); // erase the final ", "
-            return actuals;
-        }
+        string gen_lvalue(GenContext *ctx) override ;
     };
 
     class Construct : public Expr {
-        Ident&  method_;           /* Method name is same as class name */
-        Actuals& actuals_;    /* Actual arguments to constructor */
+        Ident&  method_;         
+        Actuals& actuals_;   
     public:
         explicit Construct(Ident& method, Actuals& actuals) :
                 method_{method}, actuals_{actuals} {}
@@ -544,7 +470,7 @@ namespace AST {
         Actuals& actuals_;     /* List of actual arguments */
     public:
         void gen_branch(GenContext *ctx, string true_branch, string false_branch) override {
-            // At present, we don't have 'and' and 'or'
+
             string mytype = ctx->get_type(*this);
             string reg = ctx->alloc_reg(mytype);
             gen_rvalue(ctx, reg);
@@ -552,17 +478,7 @@ namespace AST {
             ctx->emit(string("goto ") + false_branch + ";");
             ctx->free_reg(reg);
         }
-        void gen_rvalue(GenContext *ctx, string target_reg) override {
-            //obj_Int x_sum = this_x->clazz->PLUS(this_x, other_x); 
-            // names of actual arguments?
-                // what if actual arguments are themselves expressions?
-            string method_name = method_.get_var();
-            string recv_tableype = ctx->get_type(receiver_);
-            string recvreg = ctx->alloc_reg(recv_tableype);
-            receiver_.gen_rvalue(ctx, recvreg);
-            string actuals = actuals_.gen_lvalue(ctx);
-            ctx->emit(target_reg + " = " + recvreg + "->clazz->" + method_name + "(" + recvreg + ", " + actuals + ");");
-        }
+        void gen_rvalue(GenContext *ctx, string target_reg) override;
 
         explicit Call(Expr& receiver, Ident& method, Actuals& actuals) :
                 receiver_{receiver}, method_{method}, actuals_{actuals} {};
@@ -573,8 +489,7 @@ namespace AST {
             if (actuals_.init_check(vars)) { return 1;}
             return 0;
         }
-        // Convenience factory for the special case of a method
-        // created for a binary operator (+, -, etc).
+
         static Call* binop(string opname, Expr& receiver, Expr& arg);
         void json(ostream& out, AST_print_context& ctx) override;
     };
@@ -645,20 +560,13 @@ namespace AST {
         Expr& left_;
         Ident& right_;
     public:
-        void gen_rvalue(GenContext *ctx, string target_reg) override {
-            string var = get_var();
-            string loc = ctx->get_local_var(var);
-            ctx->emit(target_reg + " = " + loc + ";");
-        }
-        string gen_lvalue(GenContext *ctx) override {
-            string var = get_var();
-            return ctx->get_local_var(var);
-        }
-        string get_var() override {return left_.get_var() + "." + right_.get_var();}
+        void gen_rvalue(GenContext *ctx, string target_reg) override ;
+        std::string gen_lvalue(GenContext *ctx) override ;
+        std::string get_var() override {return left_.get_var() + "." + right_.get_var();}
         void get_vars(map<std::string, std::string>* v_table) override { return; }
         string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override;
         int init_check(set<string>* vars) override {
-            if (!vars->count(get_var())) { // not 0 would be 1, indicating failure
+            if (!vars->count(get_var())) { 
                 cout << "INIT ERROR: Used before initialized" << endl;
                 return 1;
             } 
@@ -676,7 +584,7 @@ namespace AST {
 
         void gen_rvalue(GenContext *ctx, string target_reg) override {
             classes_.gen_rvalue(ctx, target_reg);
-            GenContext class_ctx = GenContext(*ctx); // copy constructor
+            GenContext class_ctx = GenContext(*ctx); 
             class_ctx.class_name = "PGM";
             class_ctx.method_name = "PGM";
             statements_.gen_rvalue(&class_ctx, target_reg);

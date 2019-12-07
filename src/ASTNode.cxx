@@ -32,14 +32,7 @@ namespace AST {
         AST_Type_Node class_node = ctx->stc->AST_hierarchy[copy_ctx->class_name];
         class_and_methods classandmethods = class_node.methods[method_name];
         copy_ctx->emit("");
-        if (copy_ctx->class_name == method_name) { 
-            copy_ctx->emit("obj_" + method_name + " new_" + method_name + "(" + copy_ctx->get_formal_argtypes("constructor") + ") {");
-            copy_ctx->emit("obj_" + method_name + " new_obj = (obj_" + method_name + ") malloc(sizeof(struct obj_" + method_name + "_struct));");
-            copy_ctx->emit("new_obj->clazz = the_class_" + method_name + ";");
-        }
-        else { 
-            copy_ctx->emit("obj_" + classandmethods.return_type + " " + copy_ctx->class_name + "_method_" + method_name + "(" + copy_ctx->get_formal_argtypes(method_name) + ") {");
-        }
+        copy_ctx->emit("obj_" + classandmethods.return_type + " " + copy_ctx->class_name + "_method_" + method_name + "(" + copy_ctx->get_formal_argtypes(method_name) + ") {");
         statements_.gen_rvalue(copy_ctx, target_reg);
         copy_ctx->emit("}");
         copy_ctx->emit("");
@@ -63,6 +56,13 @@ namespace AST {
         }
     }
 
+
+    void Ident::gen_rvalue(GenContext *ctx, string target_reg)  {
+                /* The lvalue, i.e., address of memory */
+                string loc = ctx->get_local_var(text_);
+                ctx->emit(target_reg + " = " + loc + ";");
+            }
+
     std::string Dot::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) { 
         std::string l_type = left_.type_inference(stc, v_table, mtd); 
         right_.type_inference(stc, v_table, mtd);
@@ -76,19 +76,36 @@ namespace AST {
         return "Dot:TypeError";
     }    
 
+     void Dot::gen_rvalue(GenContext *ctx, string target_reg)  {
+            string var = get_var();
+            string loc = ctx->get_local_var(var);
+            ctx->emit(target_reg + " = " + loc + ";");
+        }
+
+    std::string Dot::gen_lvalue(GenContext *ctx)  {
+            string var = get_var();
+            return ctx->get_local_var(var);
+        }
+
+
+
     std::string Program::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) { 
         classes_.type_inference(stc, v_table, mtd);
-        class_and_method* pgmmtd = new class_and_method("PGM", "");
+        class_and_method* pgm_mtd = new class_and_method("PGM", "");
         map<std::string, std::string>* pgmv_table = &(stc->AST_hierarchy)["PGM"].instance_vars;
-        statements_.type_inference(stc, pgmv_table, pgmmtd);
+        statements_.type_inference(stc, pgmv_table, pgm_mtd);
         return "Nothing";
     }
+
+
 
     std::string Typecase::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
         expr_.type_inference(stc, v_table, mtd);
         cases_.type_inference(stc, v_table, mtd);
         return "Nothing";
     }
+
+
 
     std::string Type_Alternative::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
         ident_.type_inference(stc, v_table, mtd);
@@ -109,6 +126,24 @@ namespace AST {
         return method_name; 
     }
 
+     std::string Actuals::gen_lvalue(GenContext *ctx){
+            vector<string> actualregs = vector<string>();
+            for (ASTNode *actual: elements_) {
+                string type = ctx->get_type(*actual);
+                string reg = ctx->alloc_reg(type);
+                actualregs.push_back(reg);
+                actual->gen_rvalue(ctx, reg);
+            }
+            string actuals = "";
+            for (string reg: actualregs) {
+                actuals += reg;
+                actuals += ", ";
+            }
+            int strlen = actuals.length();
+            actuals = actuals.erase(strlen - 2, 2); 
+            return actuals;
+        }
+
     std::string If::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
         std::string cond_type = cond_.type_inference(stc, v_table, mtd);
         if (cond_type != "Boolean") {
@@ -118,6 +153,23 @@ namespace AST {
         falsepart_.type_inference(stc, v_table, mtd);
         return "Nothing";
     }
+
+    void  If::gen_rvalue(GenContext* ctx, string target_reg){
+            std::string then_statement = ctx->new_branch_label("then");
+            std::string else_statement = ctx->new_branch_label("else");
+            std::string end_statement = ctx->new_branch_label("endif");
+            cond_.gen_branch(ctx, then_statement, else_statement);
+            /* Generate the 'then' part here */
+            ctx->emit(then_statement + ": ;");
+            truepart_.gen_rvalue(ctx, target_reg);
+            ctx->emit(std::string("goto ") + end_statement + ";");
+            /* Generate the 'else' part here */
+            ctx->emit(else_statement + ": ;");
+            falsepart_.gen_rvalue(ctx, target_reg);
+            /* That's all, folks */
+            ctx->emit(end_statement + ": ;");
+        }
+    
 
     std::string Call::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
         std::string receiver_type = receiver_.type_inference(stc, v_table, mtd);
@@ -131,11 +183,21 @@ namespace AST {
         return methods[method_name].return_type;    
     }
 
+    void Call::gen_rvalue(GenContext *ctx, string target_reg) {
+
+            string method_name = method_.get_var();
+            string recv_tableype = ctx->get_type(receiver_);
+            string recvreg = ctx->alloc_reg(recv_tableype);
+            receiver_.gen_rvalue(ctx, recvreg);
+            string actuals = actuals_.gen_lvalue(ctx);
+            ctx->emit(target_reg + " = " + recvreg + "->clazz->" + method_name + "(" + recvreg + ", " + actuals + ");");
+        }
+
     string AssignDeclare::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd)  {
         lexpr_.type_inference(stc, v_table, mtd);
-        string r_type = rexpr_.type_inference(stc, v_table, mtd);
-        string l_var = lexpr_.get_var();
-        string static_type = static_type_.get_var();
+        std::string r_type = rexpr_.type_inference(stc, v_table, mtd);
+        std::string l_var = lexpr_.get_var();
+        std::string static_type = static_type_.get_var();
         map<string, string> instance_vars = (stc->AST_hierarchy)[mtd->class_name].instance_vars;
         if (!v_table->count(l_var)) { 
             if (instance_vars.count(l_var)) { 
@@ -147,8 +209,8 @@ namespace AST {
             } 
         }
      
-        string l_type = (*v_table)[l_var];
-        string lca = stc->Type_LCA(l_type, r_type);
+        std::string l_type = (*v_table)[l_var];
+        std::string lca = stc->Type_LCA(l_type, r_type);
         if (l_type != lca) { 
             if (!(stc->is_subtype(lca, static_type))) {
                 (*v_table)[l_var] = "TypeError";
@@ -162,8 +224,8 @@ namespace AST {
 
     string Assign::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd)  {
         lexpr_.type_inference(stc, v_table, mtd);
-        string r_type = rexpr_.type_inference(stc, v_table, mtd);
-        string l_var = lexpr_.get_var();
+        std::string r_type = rexpr_.type_inference(stc, v_table, mtd);
+        std::string l_var = lexpr_.get_var();
         map<string, string> instance_vars = (stc->AST_hierarchy)[mtd->class_name].instance_vars;
         if (!v_table->count(l_var)) { 
             if (instance_vars.count(l_var)) { 
@@ -174,14 +236,34 @@ namespace AST {
                 stc->modified = 1; 
             } 
         }
-        string l_type = (*v_table)[l_var];
-        string lca = stc->Type_LCA(l_type, r_type);
+        std::string l_type = (*v_table)[l_var];
+        std::string lca = stc->Type_LCA(l_type, r_type);
         if (l_type != lca) { 
             (*v_table)[l_var] = lca;
             stc->modified = 1;
         }
         return "Nothing";
     }
+
+    void Load::gen_rvalue(GenContext *ctx, std::string target_reg) {
+            std::string var = get_var();
+            std::string loc = ctx->get_local_var(var);
+            ctx->emit(target_reg + " = " + loc + ";");
+        }
+
+    std::string Load::gen_lvalue(GenContext *ctx) {
+            std::string var = get_var();
+            return ctx->get_local_var(var);
+        }
+
+    void Assign::gen_rvalue(GenContext *ctx, std::string target_reg)  {
+            std::string type = ctx->get_type(lexpr_);
+            std::string reg = ctx->alloc_reg(type);
+            std::string loc = lexpr_.gen_lvalue(ctx);
+            rexpr_.gen_rvalue(ctx, reg);
+            /* Store the value in the location */
+            ctx->emit(loc + " = " + reg + ";");
+        }
 
     string Methods::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
 
@@ -230,7 +312,16 @@ namespace AST {
         return "Nothing";
     }
 
-    string Class::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
+    void Classes::gen_rvalue(GenContext* ctx, std::string target_reg){
+            for (Class *cls: elements_) {
+                string class_name = cls->name_.get_var();
+                GenContext class_ctx = GenContext(*ctx); 
+                class_ctx.class_name = class_name;
+                cls->gen_rvalue(&class_ctx, target_reg);
+            }
+    }
+
+    std::string Class::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
             int returnval = 0;
             map<string, string>* instance_vars = &(stc->AST_hierarchy[mtd->class_name].instance_vars);
             AST_Type_Node * class_node = &stc->AST_hierarchy[mtd->class_name];
@@ -254,6 +345,34 @@ namespace AST {
             methods_.type_inference(stc, v_table, mtd);
             return "Nothing";
     }
+
+    void Class::gen_rvalue(GenContext* ctx, std::string target_reg) {
+                string class_name = name_.get_var();
+                ctx->emit("struct class_" + class_name + "_struct;");
+                ctx->emit("struct obj_" + class_name + ";");
+                ctx->emit("typedef struct obj_" + class_name + "* obj_" + class_name + ";");
+                ctx->emit("typedef struct class_" + class_name + "_struct* class_" + class_name + ";");
+                ctx->emit("");
+                ctx->emit("typedef struct obj_" + class_name + "_struct {");
+                ctx->emit("class_" + class_name + " clazz;");
+                ctx->emit_instance_vars();
+                ctx->emit("} * obj_" + class_name + ";");
+                ctx->emit("");
+                ctx->emit("struct class_" + class_name + "_struct the_class_" + class_name + "_struct;");
+                ctx->emit("");
+                ctx->emit("struct class_" + class_name + "_struct {");
+                ctx->emit("obj_" + class_name + " (*constructor) (" + ctx->get_formal_argtypes("constructor") + ");");
+                ctx->emit_method_signature(); 
+                ctx->emit("};\n");
+                ctx->emit("extern class_" + class_name + " the_class_" + class_name + ";");
+
+                ctx->emit("");
+                GenContext * construct_ctx = new GenContext(*ctx);
+                construct_ctx->method_name = "constructor";
+                constructor_.gen_rvalue(construct_ctx, target_reg);
+                methods_.gen_rvalue(ctx, target_reg);
+                ctx->emit_class_struct();
+            }
 
     string Return::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
         std::string method_name = mtd->method_name;
