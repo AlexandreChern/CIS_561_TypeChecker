@@ -41,9 +41,6 @@ string GenContext::get_type(AST::ASTNode& node) {
         classandmethods = class_node.construct;
         vars = classandmethods.vars;
     }
-    else if(method_name == "PGM")  {
-            vars = &class_node.instance_vars;
-        }
     else{ 
         classandmethods = class_node.methods[method_name];
         vars = classandmethods.vars;
@@ -62,17 +59,17 @@ string GenContext::get_formal_argtypes(string method_name) {
     else {
         method = class_node.methods[method_name];
     }
-    std::string formals = "";
+    std::string formal_argtypes = "";
     for (std::string s: method.formal_arg_types) {
-        formals = formals + "obj_" + s + ", ";
+        formal_argtypes = formal_argtypes + "obj_" + s + ", ";
     }
-    return formals;
+    return formal_argtypes;
 }
 
 string GenContext::get_local_var(string &ident) {
     if (local_vars.count(ident) == 0) {
-        string internal = string("var_") + ident;
-        local_vars[ident] = internal;
+        std::string local_var = string("var_") + ident;
+        local_vars[ident] = local_var;
         AST_Type_Node class_node = stc->AST_hierarchy[class_name];
         class_and_methods classandmethods;
         map<string, string>* vars;
@@ -80,40 +77,36 @@ string GenContext::get_local_var(string &ident) {
             classandmethods = class_node.construct;
             vars = classandmethods.vars;
         }
-        else if (method_name == "PGM"){
-                vars = &class_node.instance_vars;
-        }
-
         else{ 
-                classandmethods = class_node.methods[method_name];
-                vars = classandmethods.vars;
+            classandmethods = class_node.methods[method_name];
+            vars = classandmethods.vars;
         }
-        string type = (*vars)[ident];
-        this->emit(string("obj_") + type + " " + internal + ";");
-        return internal;
+        std::string var_type = (*vars)[ident];
+        this->emit(string("obj_") + var_type + " " + local_var + ";");
+        return local_var;
     }
     return local_vars[ident];
 }
 
 string GenContext::new_branch_label(const char* prefix) {
-    return string(prefix) + "_" + to_string(++next_label_num);
+    return std::string(prefix) + "_" + to_string(++next_label_num);
 }
 
 void GenContext::emit_instance_vars() {
     AST_Type_Node class_node = stc->AST_hierarchy[class_name];
-    map<string, string> instancevars = class_node.instance_vars;
-    for (map<string, string>::iterator iter = instancevars.begin(); iter != instancevars.end(); iter++) {
+    map<std::string, std::string> instance_vars = class_node.instance_vars;
+    for (map<string, string>::iterator iter = instance_vars.begin(); iter != instance_vars.end(); iter++) {
         emit("obj_" + iter->second + " " + iter->first + ";");
     }
 }
 
 
 
-void GenContext::emit_method_signature() {
+void GenContext::method_signature() {
     AST_Type_Node class_node = stc->AST_hierarchy[class_name];
-    for (string method: class_node.method_list) {
-        class_and_methods classandmethods = class_node.methods[method];
-        emit("obj_" + classandmethods.return_type + " (*" + method + ") (" + get_formal_argtypes(method) + ");");
+    for (std::string method_name: class_node.method_list) {
+        class_and_methods classandmethods = class_node.methods[method_name];
+        emit("obj_" + classandmethods.return_type + " (*" + method_name + ") (" + get_formal_argtypes(method_name) + ");");
     }
 }
 

@@ -199,7 +199,6 @@ namespace AST {
             explicit Method(ASTNode& name, Formals& formals, ASTNode& returns, Block& statements) :
             name_{name}, formals_{formals}, returns_{returns}, statements_{statements} {}
             std::string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override {
-                //cout << "ENTERING Method::type_inference for method " << name_.get_var() << endl;
                 formals_.type_inference(stc, v_table, mtd);
                 statements_.type_inference(stc, v_table, mtd);
                 return "Nothing";
@@ -223,7 +222,7 @@ namespace AST {
     };
 
     class Assign : public Statement {
-    protected:  // But inherited by AssignDeclare
+    protected: 
         ASTNode &lexpr_;
         ASTNode &rexpr_;
     public:
@@ -232,7 +231,7 @@ namespace AST {
         void get_vars(map<std::string, std::string>* v_table) override {
             std::string var_name = lexpr_.get_var();
             if (var_name.rfind("this", 0) == 0) {
-                (*v_table)[var_name] = "Error";
+                (*v_table)[var_name] = "TypeError";
             }
         }
         string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override;
@@ -292,10 +291,11 @@ namespace AST {
     };
 
     class If : public Statement {
-        ASTNode &cond_; // The boolean expression to be evaluated
-        Seq<ASTNode> &truepart_; // Execute this block if the condition is true
-        Seq<ASTNode> &falsepart_; // Execute this block if the condition is false
-    public:
+        ASTNode &cond_; 
+        Seq<ASTNode> &truepart_; 
+        Seq<ASTNode> &falsepart_; 
+        public:
+
         void gen_rvalue(GenContext* ctx, string target_reg) override;
         
 
@@ -303,14 +303,13 @@ namespace AST {
             cond_{cond}, truepart_{truepart}, falsepart_{falsepart} { };
         int init_check(set<std::string>* vars) override {
             if (cond_.init_check(vars)) {return 1;}
-            set<string>* trueset = new set<std::string>(*vars); // copy constructor
-            set<string>* falseset = new set<std::string>(*vars); // copy constructor
+            set<string>* trueset = new set<std::string>(*vars); 
+            set<string>* falseset = new set<std::string>(*vars); 
             if (truepart_.init_check(trueset)) {return 1;}
             if (falsepart_.init_check(falseset)) {return 1;}
-            // take set intersection
             for (set<std::string>::iterator iter = trueset->begin(); iter != trueset->end(); iter++) {
                 if (falseset->count(*iter)) {
-                    vars->insert(*iter); // if also in false part, insert to table (duplication ok, it's a set)
+                    vars->insert(*iter); 
                 }
             }
             return 0;
@@ -320,39 +319,19 @@ namespace AST {
     };
 
     class While : public Statement {
-        ASTNode& cond_;  // Loop while this condition is true
-        Seq<ASTNode>&  body_;     // Loop body
-    public:
+        ASTNode& cond_; 
+        Seq<ASTNode>&  body_; 
+        public:   
         explicit While(ASTNode& cond, Block& body) :
             cond_{cond}, body_{body} { };
 
-        void gen_rvalue(GenContext* ctx, std::string target_reg) override {
-            string check_statement = ctx->new_branch_label("check_cond");
-            string loop_statement = ctx->new_branch_label("loop");
-            string end_statement = ctx->new_branch_label("endwhile");
-            ctx->emit(check_statement + ": ;");
-            cond_.gen_branch(ctx, loop_statement, end_statement);
-            ctx->emit(loop_statement + ": ;");
-            body_.gen_rvalue(ctx, target_reg);
-            ctx->emit("goto " + check_statement + ";");
-            ctx->emit(end_statement + ": ;");
-        }
+        void gen_rvalue(GenContext* ctx, std::string target_reg) override;
+        
 
-        string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override {
-            //cout << "ENTERING While::type_inference" << endl;
-            string cond_type = cond_.type_inference(stc, v_table, mtd);
-            if (cond_type != "Boolean") {
-                cout << "TypeError (While): Condition does not evaluate to type Boolean (ignoring statements)" << endl;
-            }
-            body_.type_inference(stc, v_table, mtd);
-            return "Nothing";
-        }
-        int init_check(set<std::string>* vars) override {
-            if (cond_.init_check(vars)) {return 1;}
-            set<string>* bodyset = new set<string>(*vars); // copy constructor
-            if (body_.init_check(bodyset)) {return 1;}
-            return 0;
-        }  
+        string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override;
+      
+
+        int init_check(set<std::string>* vars) override;
         void json(ostream& out, AST_print_context& ctx) override;
 
     };

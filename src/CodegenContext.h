@@ -23,18 +23,20 @@ public:
     explicit GenContext(ostream &out, semantics* ss, string clsname, string methname) : 
         object_code{out}, stc{ss}, class_name{clsname}, method_name{methname} {};
 
-    void emit(string s);
+    void emit(std::string s);
 
-    string alloc_reg(string type);
-
-    void free_reg(string reg);
+    std::string alloc_reg(std::string type);
+    void free_reg(std::string reg);
+    void emit_instance_vars();
 
     string get_local_var(string &ident);
     string get_type(AST::ASTNode& node);
+
     string new_branch_label(const char* prefix);
-    void emit_instance_vars();
-    string get_formal_argtypes(string methodname);
-    void emit_method_signature();
+    string get_formal_argtypes(string method_name);
+
+
+    void method_signature();
     void emit_class_struct();
 };
 
